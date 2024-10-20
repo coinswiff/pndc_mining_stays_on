@@ -25,8 +25,7 @@ def get_button_offset(button_name: str, miner_window_offset: Dict[str, int]) -> 
     }
 
 def start_miner(miner_config: Dict[str, Any]) -> None:
-    logging.info(f"Starting miner {miner_config['name']}")
-    
+    logging.info(f"Starting miner {miner_config['name']}")   
     utils.goto_miner_page(miner_config)
     mine_btn_offset = get_button_offset('mine', miner_config["miner_window_offset"])
     logging.info("Clicking Mine")
@@ -42,6 +41,10 @@ def handle_claiming_status(miner_config: Dict[str, Any], skip_wait: bool) -> Non
     time_waited = utils.get_time_waited(miner_config)
     if skip_wait or time_waited > CLAIMING_WAIT_TIME:
         logging.info("Miner is done waiting. Moving on")
+        mine_again_btn_offset = get_button_offset('mine_again', miner_config["miner_window_offset"])
+        logging.info("Clicking Mine Again")
+        utils.click_on_screen(**mine_again_btn_offset)
+        time.sleep(GENERAL_WAIT_TIME)
         start_miner(miner_config)
     else:
         time_to_wait = CLAIMING_WAIT_TIME - time_waited

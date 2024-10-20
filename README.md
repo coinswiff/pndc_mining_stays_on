@@ -1,2 +1,28 @@
 # pndc_mining_stays_on
 Mining Automation Bot
+
+CAVEAT : your mileage might vary. I made this for my specific screen.  
+
+You should have a mining window open already. Go to pond0x.com, sign in with your wallet and have it so that eth and solana are both connected.
+
+1. Installation
+```
+poetry install
+```
+
+2. Config ( to calculate the offset for the mining window )
+NOTE: Choose miner config to update or new miner
+
+```
+poetry run python src/utils.py find_miner_config
+```
+
+Update your miner_config.json with the value printed above
+
+3. Run the bot ( in this case the first bot indicated by index 0 ) 
+```
+poetry run python src/minepond.py mine_pond 0
+```
+
+
+
