@@ -103,8 +103,8 @@ def convert_to_seconds(s):
 
 def get_time_waited(miner_config):
     miner_window_offset = miner_config["miner_window_offset"]
-    x = miner_window_offset["x"] + 435
-    y = miner_window_offset["y"] + 380
+    x = miner_window_offset["x"] + 433
+    y = miner_window_offset["y"] + 377
     w = 60
     h = 22 #140
     screenshot = pyautogui.screenshot(region=(x, y, w, h))
