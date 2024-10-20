@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "pondminingauto"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pillow = "^11.0.0"
+pytesseract = "^0.3.13"
+pyautogui = "^0.9.54"
+opencv-python = "^4.10.0.84"
+typing-extensions = "^4.12.2"
+pywinctl = "^0.4.1"
+pygetwindow = "^0.0.9"
+pyperclip = "^1.9.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
