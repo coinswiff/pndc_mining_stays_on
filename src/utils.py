@@ -98,7 +98,7 @@ def convert_to_seconds(s):
     if s == "":
         raise Exception("Time input is empty")
     
-    #print(f"Converting {s} to seconds")
+    logging.info(f"Converting {s} to seconds")
     return int(s[:-1]) * seconds_per_unit[s[-1]]
 
 def get_time_waited(miner_config):
@@ -134,7 +134,13 @@ def get_miner_info(miner_config):
 
 def load_config_from_json(config_path="mining_config.json"):
     with open(config_path, 'r') as file:
-        return json.load(file)
+        _config = json.load(file)
+    
+    # Default to 1 mine per cooldown if not specified
+    for miner in _config["miners"]:
+        if "mining_per_cooldown" not in miner:
+            miner["mining_per_cooldown"] = 1
+    return _config
 
 def goto_miner_page_experimental(miner_config):
     logging.info("Going to miner page")
@@ -281,8 +287,7 @@ if __name__ == "__main__":
         "get_time_waited": get_time_waited,
         "get_miner_info": get_miner_info,
         "goto_miner_page": goto_miner_page,
-        "is_miner_page": is_miner_page,
-        "find_miner_config": find_miner_config
+        "is_miner_page": is_miner_page
     }
 
     if args.function == "find_miner_config":
