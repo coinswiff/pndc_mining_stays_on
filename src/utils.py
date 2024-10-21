@@ -1,5 +1,5 @@
 import datetime
-from PIL import ImageGrab
+from PIL import ImageGrab, Image, ImageEnhance
 import pyautogui
 import pytesseract
 import json
@@ -41,8 +41,14 @@ def find_button_coordinates(btn_name):
     else:
         return None
 
-    
+def preprocess_image(img: Image.Image):
+    img = ImageEnhance.Contrast(img.convert('L')).enhance(2) # Convert to grayscale first and then enhance contrast
+    img = ImageEnhance.Brightness(img).enhance(1.2)
+    img = ImageEnhance.Sharpness(img).enhance(2)
+    return img
+
 def grab_mining_info(status_img):
+    preprocessed_img = preprocess_image(status_img)
     text = pytesseract.image_to_string(status_img, config="--psm 6")
     logging.debug(f"OCR Text: {text}")
     
@@ -58,6 +64,8 @@ def grab_mining_info(status_img):
             info['unclaimed'] = info['unclaimed']
         if 'boost' in info:
             info['boost'] = float(info['boost'])
+        if 'time' in info:
+            info['time'] = int(info['time'])
         if 'hashrate' in info:
             info['hashrate'] = float(info['hashrate'].split()[0].replace('@','0'))
     except ValueError as e:
@@ -123,7 +131,7 @@ def get_miner_info(miner_config):
     x = miner_window_offset["x"] + 50
     y = miner_window_offset["y"] + 90
     w = 380
-    h = 110 #140
+    h = 130 #140
     screenshot = pyautogui.screenshot(region=(x, y, w, h))
     info = grab_mining_info(screenshot)
     if 'hashrate' not in info:
@@ -150,6 +158,7 @@ def goto_miner_page_experimental(miner_config):
     pyautogui.hotkey('command', 'l')
     pyautogui.typewrite(MINING_URL + "\n")
     time.sleep(3) # Allow 3 seconds to reload
+    # We might need to re-establish the connection. 
     
 def goto_miner_page(miner_config):
     print("Going to miner page")

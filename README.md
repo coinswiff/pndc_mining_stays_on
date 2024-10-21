@@ -19,7 +19,12 @@ poetry run python src/utils.py find_miner_config
 
 Update your miner_config.json with the value printed above
 
-3. Run the bot ( in this case the first bot indicated by index 0 ) 
+3. Create output screenshot directory for debugging. Periodically delete files 
+```
+mkdir -p out/screenshots
+```
+
+4. Run the bot ( in this case the first bot indicated by index 0 ) 
 ```
 poetry run python src/minepond.py mine_pond 0
 ```

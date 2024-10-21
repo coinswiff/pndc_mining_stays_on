@@ -106,6 +106,7 @@ def mine_pond(miner_config: Dict[str, Any], skip_cooldown: bool) -> None:
             if mining_info:
                 if len(mining_sessions) > 0:
                     mining_sessions[-1]['rewards'] = mining_info['unclaimed']
+                    mining_sessions[-1]['time'] = mining_info['time']
                     mining_sessions[-1]['claimed'] = claimed
                     logging.info(f"Updated last mining session: {mining_sessions[-1]}")
                 else:
@@ -113,15 +114,23 @@ def mine_pond(miner_config: Dict[str, Any], skip_cooldown: bool) -> None:
                         miner_name=miner_config["name"],
                         start_time=time.time(), # Maybe get this from the time field.
                         status="MINING",
+                        time=mining_info['time'],
                         claimed=claimed,
                         rewards=mining_info['unclaimed']
                     ))
                     logging.info(f"Started new mining session: {mining_sessions[-1]}")
         else:
+            # We have to check if we got into a loop here. Find out where we are
+            in_mining_page = utils.is_miner_page(miner_config)
+            if not in_mining_page:
+                logging.info("We are not in the mining page. Going back to the miner page")
+                utils.goto_miner_page_experimental(miner_config)
+                
+            
             mine_session = start_miner(miner_config)
             logging.info(f"Started new mining session: {mine_session}")
             mining_sessions.append(mine_session)
-        
+    
         time.sleep(GENERAL_WAIT_TIME)
 
 def main():
