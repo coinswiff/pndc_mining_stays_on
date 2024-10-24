@@ -51,6 +51,12 @@ class MacWindow:
     @property
     def bottom(self) -> int:
         return self._top + self._height
+    
+    def getAppName(self) -> str:
+        return self._app_name
+    
+    def getPID(self) -> Optional[int]:
+        return self._pid
         
     def box(self) -> tuple:
         """Returns the window box as (left, top, width, height)"""
@@ -147,10 +153,11 @@ class MacWindowTracker:
         
         while True:
             current_window = MacWindowTracker.get_active_window()
-            
+            print(current_window)
+            print(last_window)
             if current_window and (not last_window or 
                 current_window.title != last_window.title or
-                current_window.appName != last_window.appName):
+                current_window.getPID() != last_window.getPID()):
                 
                 callback_fn(current_window)
                 last_window = current_window
@@ -162,13 +169,11 @@ def basic_usage():
     tracker = MacWindowTracker()
     active_window = tracker.get_active_window()
     if active_window:
-        print(f"Active window: {active_window['title']}")
-        print(f"Application: {active_window['app_name']}")
+        print(f"Active window: {active_window.title}")
 
     # Monitor window changes
     def on_window_change(window_info):
-        print(f"Window changed to: {window_info['title']}")
-        print(f"Method used: {window_info['method']}")
+        print(f"Window changed to: {window_info.title}")
 
     # Start monitoring (runs indefinitely)
     tracker.monitor_active_window(on_window_change, interval=1.0)
