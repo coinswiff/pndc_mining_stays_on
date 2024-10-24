@@ -3,16 +3,12 @@ from PIL import ImageGrab, Image, ImageEnhance
 import pyautogui
 import pytesseract
 import json
-import os
 import argparse
 import logging
-import pywinctl as pwc
-import curses
 import pyperclip
 import time
 
 from config import MINING_URL, OUTPUT_DIR, logging
-from config import MINER_BOX_SIZE, BROWSER_TAB_SIZE
 
 pyautogui.PAUSE = 1.5
 
@@ -184,100 +180,6 @@ def is_miner_page(miner_config):
         logging.debug(f"URL: {url}")
         return False
 
-def find_miner_config(config):
-    miner_config = config.copy()
-    all_windows = pwc.getAllWindows()
-    all_window_titles = { window.title: window for window in all_windows }
-    miner_count = len(miner_config["miners"])
-    print(f"Found {miner_count} miners in config")
-    
-    def display_miner_menu(stdscr, selected_idx):
-        stdscr.clear()
-        h, w = stdscr.getmaxyx()
-        stdscr.addstr(0, 0, "Which miner are we updating?")
-        for i in range(miner_count):
-            if i == selected_idx:
-                stdscr.attron(curses.color_pair(1))
-                stdscr.addstr(i + 2, 0, f"> Miner {i + 1}")
-                stdscr.attroff(curses.color_pair(1))
-            else:
-                stdscr.addstr(i + 2, 0, f"  Miner {i + 1}")
-        if selected_idx == miner_count:
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addstr(miner_count + 2, 0, "> Add a new miner")
-            stdscr.attroff(curses.color_pair(1))
-        else:
-            stdscr.addstr(miner_count + 2, 0, "  Add a new miner")
-        stdscr.addstr(h-1, 0, "Use arrow keys to navigate, Enter to select")
-        stdscr.refresh()
-
-    def get_miner_selection(stdscr):
-        curses.curs_set(0)
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        selected_idx = 0
-        while True:
-            display_miner_menu(stdscr, selected_idx)
-            key = stdscr.getch()
-            if key == curses.KEY_UP and selected_idx > 0:
-                selected_idx -= 1
-            elif key == curses.KEY_DOWN and selected_idx < miner_count:
-                selected_idx += 1
-            elif key == curses.KEY_ENTER or key in [10, 13]:
-                return selected_idx
-
-    miner_choice = curses.wrapper(get_miner_selection)
-    
-    if miner_choice == miner_count:
-        print("Adding a new miner.")
-        miner_config["miners"].append({"name": f"miner{miner_count + 1}", "miner_window_offset": {}})
-        miner_index = miner_count
-    else:
-        miner_index = miner_choice
-        print(f"Updating Miner {miner_index + 1}")
- 
-    _config = miner_config["miners"][miner_index]
-    
-    def display_window_menu(stdscr, selected_idx):
-        stdscr.clear()
-        h, w = stdscr.getmaxyx()
-        stdscr.addstr(0, 0, "Choose your miner window:")
-        for idx, title in enumerate(all_window_titles.keys()):
-            if idx == selected_idx:
-                stdscr.attron(curses.color_pair(1))
-                stdscr.addstr(idx + 2, 0, f"> {title}")
-                stdscr.attroff(curses.color_pair(1))
-            else:
-                stdscr.addstr(idx + 2, 0, f"  {title}")
-        stdscr.addstr(h-1, 0, "Use arrow keys to navigate, Enter to select")
-        stdscr.refresh()
-
-    def get_window_selection(stdscr):
-        curses.curs_set(0)
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        selected_idx = 0
-        while True:
-            display_window_menu(stdscr, selected_idx)
-            key = stdscr.getch()
-            if key == curses.KEY_UP and selected_idx > 0:
-                selected_idx -= 1
-            elif key == curses.KEY_DOWN and selected_idx < len(all_window_titles) - 1:
-                selected_idx += 1
-            elif key == curses.KEY_ENTER or key in [10, 13]:
-                return selected_idx
-
-    selected_idx = curses.wrapper(get_window_selection)
-    
-    selected_window = list(all_window_titles.values())[selected_idx]
-    print("\nSelected window details:")
-    print(f"Title: {selected_window.title}")
-    print(f"Box dimensions: {selected_window.box}")
-    offset = (selected_window.box.width - MINER_BOX_SIZE) // 2
-    _config["miner_window_offset"] = {
-        "x": selected_window.box.left + offset, 
-        "y": selected_window.box.top + BROWSER_TAB_SIZE
-    }
-    print(f"Miner config: {_config}")
-    return selected_window.box, miner_index
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get miner status")
@@ -299,15 +201,11 @@ if __name__ == "__main__":
         "is_miner_page": is_miner_page
     }
 
-    if args.function == "find_miner_config":
-        logging.info("Calculating miner config")
-        find_miner_config(config)
-    else:
-        miner_config = config["miners"][args.miner_number]
-        logging.info(f"Miner config: {miner_config}")
+    miner_config = config["miners"][args.miner_number]
+    logging.info(f"Miner config: {miner_config}")
 
-        if args.function in function_map:
-            result = function_map[args.function](miner_config)
-            print(result)
-        else:
-            logging.error(f"Function {args.function} not found")
+    if args.function in function_map:
+        result = function_map[args.function](miner_config)
+        print(result)
+    else:
+        logging.error(f"Function {args.function} not found")

@@ -9,6 +9,10 @@
         {
             "name": "miner2",
             "miner_window_offset": {"x": 557, "y": 156}
-        }
+        },
+	{
+	    "name": "miner3",
+	    "miner_window_offset": {"x": 1165, "y": 158}
+	}
     ]
 }

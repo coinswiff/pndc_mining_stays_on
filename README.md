@@ -11,12 +11,12 @@ poetry install
 ```
 
 2. Config ( to calculate the offset for the mining window )
-NOTE: Choose miner config to update or new miner
+NOTE:Copy and paste the miner config output to mining_config.json 
 
 ```
-poetry run python src/utils.py find_miner_config
+poetry run python src/miner_config.py
 ```
-
+The above command will ask you to click on the window where you are mining to calculate co-ordinates.
 Update your miner_config.json with the value printed above
 
 3. Create output screenshot directory for debugging. Periodically delete files 

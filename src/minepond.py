@@ -124,7 +124,7 @@ def mine_pond(miner_config: Dict[str, Any], skip_cooldown: bool) -> None:
             in_mining_page = utils.is_miner_page(miner_config)
             if not in_mining_page:
                 logging.info("We are not in the mining page. Going back to the miner page")
-                utils.goto_miner_page_experimental(miner_config)
+                utils.goto_miner_page(miner_config)
                 
             
             mine_session = start_miner(miner_config)
