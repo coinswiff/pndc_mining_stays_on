@@ -26,7 +26,7 @@ def get_button_offset(button_name: str, miner_window_offset: Dict[str, int]) -> 
 
 def start_miner(miner_config: Dict[str, Any]) -> None:
     logging.info(f"Starting miner {miner_config['name']}")   
-    utils.goto_miner_page(miner_config)
+    #utils.goto_miner_page(miner_config)
     mine_btn_offset = get_button_offset('mine', miner_config["miner_window_offset"])
     logging.info("Clicking Mine")
     utils.click_on_screen(**mine_btn_offset)
