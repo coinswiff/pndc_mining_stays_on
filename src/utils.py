@@ -43,6 +43,18 @@ def preprocess_image(img: Image.Image):
     img = ImageEnhance.Sharpness(img).enhance(2)
     return img
 
+def parse_time_to_seconds(time_str):
+    time_parts = time_str.split(':')
+    if len(time_parts) == 1:
+        return int(time_parts[0])  # seconds
+    elif len(time_parts) == 2:
+        return int(time_parts[0]) * 60 + int(time_parts[1])  # minutes:seconds
+    elif len(time_parts) == 3:
+        return int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])  # hours:minutes:seconds
+    else:
+        logging.warning(f"Unexpected time format: {time_str}")
+        return 0
+
 def grab_mining_info(status_img):
     preprocessed_img = preprocess_image(status_img)
     text = pytesseract.image_to_string(status_img, config="--psm 6")
@@ -56,12 +68,16 @@ def grab_mining_info(status_img):
 
     # Convert numeric values to appropriate types
     try:
+        if 'status' in info:
+            info['status'] = info['status'].replace(".", "").upper()
         if 'unclaimed' in info:
             info['unclaimed'] = info['unclaimed']
         if 'boost' in info:
             info['boost'] = float(info['boost'])
         if 'time' in info:
-            info['time'] = int(info['time'])
+            info['time'] = parse_time_to_seconds(info['time'])
+        else:
+            info['time'] = 0
         if 'hashrate' in info:
             info['hashrate'] = float(info['hashrate'].split()[0].replace('@','0'))
     except ValueError as e:
@@ -108,12 +124,14 @@ def convert_to_seconds(s):
 def get_time_waited(miner_config):
     miner_window_offset = miner_config["miner_window_offset"]
     x = miner_window_offset["x"] + 433
-    y = miner_window_offset["y"] + 377
+    y = miner_window_offset["y"] + 328
     w = 60
-    h = 22 #140
-    screenshot = pyautogui.screenshot(region=(x, y, w, h))
+    h = 26 #140
+    screenshot = preprocess_image(pyautogui.screenshot(region=(x, y, w, h)))
     text = pytesseract.image_to_string(screenshot, config="--psm 7")
     try:
+        if text.strip() == "th" or text.strip() == "dh" or text.strip() == "tho":
+            text = "1h"
         time_waited = convert_to_seconds(text.strip())    
         return time_waited
     except Exception as e:
