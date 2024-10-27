@@ -11,13 +11,13 @@ import db_utils
 BUTTON_OFFSETS = {
     "mine": {"x": 200, "y": 315},
     "mine_again": {"x": 200, "y": 300},
-    "logo": {"x": 65, "y": 35},
+    "logo": {"x": 65, "y": 33},
     "confirm_in_wallet": {"x": 430, "y": 590},
     "claim": {"x": 200, "y": 310},
 }
 
 COOLDOWN_WAIT_TIME = 1200  # 20 minutes in seconds
-MINING_CHECK_INTERVAL = 900  # 15 minutes in seconds
+MINING_CHECK_INTERVAL = 300  # 5 minutes in seconds
 GENERAL_WAIT_TIME = 6
 RETRY_WAIT_TIME = 30
 
@@ -27,10 +27,17 @@ def get_button_offset(button_name: str, miner_window_offset: Dict[str, int]) -> 
         "y": miner_window_offset["y"] + BUTTON_OFFSETS[button_name]["y"]
     }
 
+def activate_window(miner_config: Dict[str, Any]):
+    x = miner_config["miner_window_offset"]["x"] + 20
+    y = miner_config["miner_window_offset"]["y"] + 20
+    logging.info("Activate Window by clicking on it")
+    utils.click_on_screen(x, y, double_click=False)
+
 def start_miner(miner_config: Dict[str, Any]) -> str:
     logging.info(f"Starting miner {miner_config['name']}")
     mine_btn_offset = get_button_offset('mine', miner_config["miner_window_offset"])
     logging.info("Clicking Mine")
+    # verify that we are in fact clicking the mine button
     utils.click_on_screen(**mine_btn_offset)
     time.sleep(3)
     
@@ -53,19 +60,16 @@ def handle_claiming_status(miner_config: Dict[str, Any], skip_cooldown: bool) ->
     
     if should_mine or skip_cooldown:
         logging.info("Miner is done waiting. Moving on")
-        logo_btn_offset = get_button_offset('logo', miner_config["miner_window_offset"])
-        logging.info("Clicking Logo")
-        utils.click_on_screen(**logo_btn_offset)
-        time.sleep(GENERAL_WAIT_TIME/2)
-        return True
     else:
         logging.info(f"Miner is claiming. Waiting for {COOLDOWN_WAIT_TIME} seconds")
         time.sleep(COOLDOWN_WAIT_TIME)
-        logo_btn_offset = get_button_offset('logo', miner_config["miner_window_offset"])
-        logging.info("Clicking Logo")
-        utils.click_on_screen(**logo_btn_offset)
-        time.sleep(GENERAL_WAIT_TIME/2)
-        return False
+    
+    activate_window(miner_config)
+    logo_btn_offset = get_button_offset('logo', miner_config["miner_window_offset"])
+    logging.info("Clicking Logo")
+    utils.click_on_screen(**logo_btn_offset)
+    time.sleep(GENERAL_WAIT_TIME/2)
+    return True
 
 def handle_mining_status(miner_config: Dict[str, Any]) -> Dict[str, Any]:
     mining_info = utils.get_miner_info(miner_config)
@@ -97,6 +101,10 @@ def handle_mining_status(miner_config: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 logging.info("Can start mining immediately")
             
+            activate_window(miner_config)
+            logo_btn_offset = get_button_offset('logo', miner_config["miner_window_offset"])
+            logging.info("Clicking Logo to go to home page")
+            utils.click_on_screen(**logo_btn_offset, double_click=False)
             return True, mining_info
         else:
             logging.info(f"Miner is mining with hashrate: {mining_info['hashrate']}. Waiting for {MINING_CHECK_INTERVAL // 60} minutes")

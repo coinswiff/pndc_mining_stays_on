@@ -23,10 +23,13 @@ def take_screenshot(output_dir=OUTPUT_DIR):
 def get_screen_size():
     return ImageGrab.grab().size
 
-def click_on_screen(x, y):
+def click_on_screen(x, y, double_click=True):
     logging.info(f"Clicking on ({x}, {y})")
     pyautogui.moveTo(x, y)
-    pyautogui.doubleClick()
+    if double_click:
+        pyautogui.doubleClick(x, y)
+    else:
+        pyautogui.click(x, y)
 
 def find_button_coordinates(btn_name):
     image_path = f"assets/{btn_name}_btn.png"
