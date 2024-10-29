@@ -95,7 +95,7 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.execute("""
                 SELECT session_id, start_time, cooldown_count FROM mining_sessions 
-                WHERE miner_name = ? AND end_time IS NULL 
+                WHERE miner_name = ? AND end_time IS NULL AND cooldown_count > 0
                 ORDER BY start_time DESC LIMIT 1
                 """, (miner_name,))
             return cursor.fetchone()

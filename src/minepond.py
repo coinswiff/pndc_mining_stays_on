@@ -101,7 +101,6 @@ class MiningSession:
         # If should_mine is True, we can proceed immediately
         if should_mine or skip_cooldown:
             logging.info("Can start mining immediately")
-            self.reset_cooldown_count()
         else:
             logging.info(f"Miner is claiming. Waiting for {MiningConfig.COOLDOWN_WAIT_TIME} seconds")
             time.sleep(MiningConfig.COOLDOWN_WAIT_TIME)
@@ -145,6 +144,8 @@ class MiningSession:
             
             # Safely decrement cooldown count
             self.cooldown_count = max(0, self.cooldown_count - 1)
+            if self.cooldown_count == 0:
+                self.reset_cooldown_count()
             self.session_id = None  # Reset session_id after completion
 
     def handle_mining(self) -> Tuple[bool, Optional[Dict[str, Any]]]:
@@ -189,7 +190,6 @@ class MiningSession:
         # If should_mine is True, we can proceed immediately
         if self.db.should_start_mining(self.miner_config["name"]):
             logging.info("Can start mining immediately")
-            self.reset_cooldown_count()
         else:
             logging.info(f"Completed mining_per_cooldown sessions. "
                         f"Waiting for {MiningConfig.COOLDOWN_WAIT_TIME // 60} minutes")
