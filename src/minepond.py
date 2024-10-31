@@ -30,6 +30,7 @@ class MiningConfig:
     GENERAL_WAIT_TIME: int = 6
     RETRY_WAIT_TIME: int = 30
     MIN_REWARD_THRESHOLD: float = 100.0
+    STALL_CHECK_TIME: int = 1200  # 20 minutes in seconds
 
 class MiningSession:
     def __init__(self, miner_config: Dict[str, Any], db_manager: DatabaseManager):
@@ -38,6 +39,9 @@ class MiningSession:
         self.session_id: Optional[str] = None
         self.reset_cooldown_count()
         self._lock = threading.Lock()
+        self.last_unclaimed = 0.0
+        self.last_unclaimed_time = 0  # Initialize to 0 instead of current time
+        self.time_since_unclaimed_change = 0
         
     def reset_cooldown_count(self):
         self.cooldown_count: int = self.miner_config["mining_per_cooldown"]
@@ -90,6 +94,10 @@ class MiningSession:
                 self.cooldown_count,
                 boost=mining_info.get('boost', 0)
             )
+            # Initialize tracking variables after successful mining start
+            self.last_unclaimed = float(re.sub(r'[^\d.]', '', mining_info["unclaimed"]))
+            self.last_unclaimed_time = time.time()
+            self.time_since_unclaimed_change = 0
             logging.info(f"Started new mining session: {self.session_id}")
             return self.session_id
         
@@ -156,29 +164,32 @@ class MiningSession:
             return False, None
 
         if mining_info["hashrate"] == 0:
-            return self._handle_zero_hashrate(mining_info)
+            return self.stop_mining(mining_info)
         
+        # Check for stalled mining (no increase in unclaimed rewards)
+        current_unclaimed = float(re.sub(r'[^\d.]', '', mining_info["unclaimed"]))
+        current_time = time.time()
+        
+        if current_unclaimed > 0 and current_unclaimed == self.last_unclaimed:
+            if self.time_since_unclaimed_change >= MiningConfig.STALL_CHECK_TIME:
+                logging.info(f"Mining appears stalled - no increase in unclaimed rewards for {MiningConfig.STALL_CHECK_TIME // 60} minutes")
+                return self.stop_mining(mining_info)
+            else:
+                self.time_since_unclaimed_change = (current_time - self.last_unclaimed_time)
+        else:
+            self.time_since_unclaimed_change = 0
+            self.last_unclaimed_time = current_time
+            self.last_unclaimed = current_unclaimed
+                    
         logging.info(f"Miner is mining with hashrate: {mining_info['hashrate']}. "
-                    f"Waiting for {MiningConfig.MINING_CHECK_INTERVAL // 60} minutes")
+                    f"Waiting for {MiningConfig.MINING_CHECK_INTERVAL // 60} minutes. "
+                    f"Time since unclaimed change: {self.time_since_unclaimed_change // 60} minutes")
         time.sleep(MiningConfig.MINING_CHECK_INTERVAL)
         return False, mining_info
 
-    def _get_valid_mining_info(self) -> Optional[Dict[str, Any]]:
-        """Get valid mining info with retry"""
-        mining_info = utils.get_miner_info(self.miner_config)
-        if 'hashrate' not in mining_info:
-            logging.info("Hashrate not found. Waiting for 10 seconds")
-            time.sleep(10)
-            mining_info = utils.get_miner_info(self.miner_config)
-            if 'hashrate' not in mining_info:
-                logging.info("Hashrate not found. Try again in a bit")
-                time.sleep(10)
-                return None
-        return mining_info
-
-    def _handle_zero_hashrate(self, mining_info: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
-        """Handle case when hashrate drops to zero"""
-        logging.info("Hashrate went to zero. Claiming now")
+    def stop_mining(self, mining_info: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+        """Stop mining, claim rewards, and prepare for next session"""
+        logging.info("Stopping mining session and claiming rewards")
         
         # Click claim button
         stop_and_claim_btn_offset = self.get_button_offset('claim')
@@ -204,6 +215,19 @@ class MiningSession:
         utils.click_on_screen(**logo_btn_offset, double_click=False)
         
         return True, mining_info
+
+    def _get_valid_mining_info(self) -> Optional[Dict[str, Any]]:
+        """Get valid mining info with retry"""
+        mining_info = utils.get_miner_info(self.miner_config)
+        if 'hashrate' not in mining_info:
+            logging.info("Hashrate not found. Waiting for 10 seconds")
+            time.sleep(10)
+            mining_info = utils.get_miner_info(self.miner_config)
+            if 'hashrate' not in mining_info:
+                logging.info("Hashrate not found. Try again in a bit")
+                time.sleep(10)
+                return None
+        return mining_info
 
 def mine_pond(miner_config: Dict[str, Any], skip_cooldown: bool, db_manager: DatabaseManager) -> None:
     """Main mining loop"""
