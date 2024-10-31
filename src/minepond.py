@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from config import logging
 from db_utils import DatabaseManager, DBConfig
 import threading
+from datetime import datetime
 
 @dataclass
 class MiningState:
@@ -190,6 +191,7 @@ class MiningSession:
         # If should_mine is True, we can proceed immediately
         if self.db.should_start_mining(self.miner_config["name"]):
             logging.info("Can start mining immediately")
+            time.sleep(MiningConfig.GENERAL_WAIT_TIME)
         else:
             logging.info(f"Completed mining_per_cooldown sessions. "
                         f"Waiting for {MiningConfig.COOLDOWN_WAIT_TIME // 60} minutes")
@@ -239,20 +241,93 @@ def mine_pond(miner_config: Dict[str, Any], skip_cooldown: bool, db_manager: Dat
             
         time.sleep(MiningConfig.GENERAL_WAIT_TIME)
 
+def format_rewards(rewards_in_millions: float) -> str:
+    """Format rewards in billions with 3 decimal places"""
+    if rewards_in_millions is None:
+        return "0.000B"
+    rewards_in_billions = rewards_in_millions / 1000
+    return f"{rewards_in_billions:.3f}B"
+
+def analyze_mining_sessions(db_manager: DatabaseManager) -> None:
+    """Analyze and display mining session statistics"""
+    with db_manager.get_connection() as conn:
+        # Get stats per miner
+        cursor = conn.execute("""
+            SELECT 
+                miner_name,
+                COUNT(*) as total_sessions,
+                COUNT(CASE WHEN rewards = 0 OR rewards IS NULL THEN 1 END) as bust_sessions,
+                SUM(CASE WHEN rewards IS NULL THEN 0 ELSE rewards END) as total_rewards
+            FROM mining_sessions
+            WHERE end_time IS NOT NULL
+            GROUP BY miner_name
+        """)
+        miner_stats = cursor.fetchall()
+        
+        # Get overall totals
+        cursor = conn.execute("""
+            SELECT 
+                COUNT(*) as total_sessions,
+                COUNT(CASE WHEN rewards = 0 OR rewards IS NULL THEN 1 END) as bust_sessions,
+                SUM(CASE WHEN rewards IS NULL THEN 0 ELSE rewards END) as total_rewards
+            FROM mining_sessions
+            WHERE end_time IS NOT NULL
+        """)
+        overall_stats = cursor.fetchone()
+        
+        # Print statistics
+        print("\n=== Mining Statistics ===\n")
+        print("Per Miner Statistics:")
+        print("-" * 80)
+        print(f"{'Miner Name':<20} {'Total Sessions':<15} {'Bust Sessions':<15} {'Total Claimed Rewards':<15}")
+        print("-" * 80)
+        
+        for miner_name, total_sessions, bust_sessions, total_rewards in miner_stats:
+            print(f"{miner_name:<20} {total_sessions:<15} {bust_sessions:<15} {format_rewards(total_rewards):<15}")
+        
+        print("\nOverall Statistics:")
+        print("-" * 80)
+        total_sessions, total_busts, total_rewards = overall_stats
+        print(f"Total Mining Sessions: {total_sessions}")
+        print(f"Total Bust Sessions: {total_busts} ({(total_busts/total_sessions*100):.1f}% bust rate)")
+        print(f"Total IOU Rewards Mined: {format_rewards(total_rewards)}")
+        
+        # Get active sessions
+        cursor = conn.execute("""
+            SELECT miner_name, start_time, cooldown_count
+            FROM mining_sessions
+            WHERE end_time IS NULL
+            ORDER BY start_time DESC
+        """)
+        active_sessions = cursor.fetchall()
+        
+        if active_sessions:
+            print("\nActive Mining Sessions:")
+            print("-" * 80)
+            print(f"{'Miner Name':<20} {'Start Time':<25} {'Cooldown Count':<15}")
+            print("-" * 80)
+            for miner_name, start_time, cooldown_count in active_sessions:
+                start_time = datetime.fromisoformat(start_time)
+                print(f"{miner_name:<20} {start_time.strftime('%Y-%m-%d %H:%M:%S'):<25} {cooldown_count:<15}")
+
 def main():
     parser = argparse.ArgumentParser(description="Manage POND mining operations")
-    parser.add_argument("function", type=str, help="Function to run")
-    parser.add_argument("miner_number", type=int, help="Miner number to check status for")
+    parser.add_argument("function", type=str, help="Function to run (start_miner/mine_pond/stats)")
+    parser.add_argument("miner_number", type=int, nargs='?', help="Miner number to check status for")
     parser.add_argument("--skip-cooldown", action="store_true", help="Skip waiting for the cooldown")
     parser.add_argument("--db-path", type=str, default="mining_sessions.db", help="Path to the database file")
     args = parser.parse_args()
 
-    config = utils.load_config_from_json()
-    miner_config = config["miners"][args.miner_number]
-
     # Initialize database manager
     db_manager = DatabaseManager(args.db_path)
     db_manager.init_db()
+
+    if args.function == "stats":
+        analyze_mining_sessions(db_manager)
+        return
+
+    config = utils.load_config_from_json()
+    miner_config = config["miners"][args.miner_number]
 
     if args.function == "start_miner":
         session = MiningSession(miner_config, db_manager)

@@ -4,14 +4,14 @@
         {
             "name": "miner1",
             "miner_window_offset": {
-                "x": 64,
-                "y": 123
+                "x": 25,
+                "y": 126
             },
             "mining_per_cooldown": 2,
             "window_box": {
-                "left": 59,
-                "top": 33,
-                "width": 511,
+                "left": 16,
+                "top": 36,
+                "width": 519,
                 "height": 607
             }
         }
@@ -19,30 +19,31 @@
         {
             "name": "miner2",
             "miner_window_offset": {
-                "x": 576,
-                "y": 123
+                "x": 544,
+                "y": 126
             },
             "mining_per_cooldown": 2,
             "window_box": {
-                "left": 571,
-                "top": 33,
-                "width": 511,
+                "left": 536,
+                "top": 36,
+                "width": 517,
                 "height": 607
             }
-        },
+        }
+        ,
         {
             "name": "miner3",
             "miner_window_offset": {
-                "x": 1105,
-                "y": 123
+                "x": 1062,
+                "y": 124
             },
             "mining_per_cooldown": 2,
             "window_box": {
-                "left": 1090,
-                "top": 33,
-                "width": 530,
+                "left": 1054,
+                "top": 34,
+                "width": 517,
                 "height": 609
             }
-        }
+        }         
     ]
 }
