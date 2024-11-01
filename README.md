@@ -29,5 +29,9 @@ mkdir -p out/screenshots
 poetry run python src/minepond.py mine_pond 0
 ```
 
+5. Find out how your miners are doing. The following code will give you a breakdown of your miners and claims so far. 
+```
+poetry run python src/minepond.py stats
+```
 
 
